@@ -1,74 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Alvic Gym – QR Attendance</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet"/>
+<title>Alvic Gym Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
+  :root {
+    --gold: #f5c518;
+    --dark: #0a0a0a;
+    --glass: rgba(10,10,10,0.72);
+    --red: #e63946;
+    --white: #f1f1f1;
+  }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    min-height: 100vh;
-    background: #0a0a0a;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-family: 'Rajdhani', sans-serif;
-    color: #f1f1f1;
-    padding: 24px;
-  }
-  .logo { font-family:'Bebas Neue',sans-serif; font-size: 3.5rem; letter-spacing: 4px; color: #f5c518; margin-bottom: 4px; }
-  .sub  { font-size: 13px; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 36px; }
+  body { min-height:100vh; font-family:'Rajdhani',sans-serif; color:var(--white); overflow-x:hidden; }
 
-  .qr-box {
-    background: #fff;
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 0 0 5px #f5c518, 0 0 60px rgba(245,197,24,0.4);
-    margin-bottom: 28px;
+  .bg {
+    position:fixed; inset:0;
+    background:url('https://content.jdmagicbox.com/comp/trichy/h2/0431px431.x431.220318225244.f2h2/catalogue/alvic-gym-and-fitness-centre-unisex-gym-trichy-82vtx5moiu.jpg') center/cover no-repeat;
+    z-index:0;
   }
-  #qrcode img, #qrcode canvas { display:block; }
+  .bg::after { content:''; position:absolute; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(2px); }
 
-  .instruction {
-    font-size: 22px; font-weight: 700; letter-spacing: 2px;
-    color: #f5c518; text-align: center; margin-bottom: 8px;
+  .page {
+    position:relative; z-index:1;
+    min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px 16px;
   }
-  .instruction2 {
-    font-size: 14px; letter-spacing: 2px; color: rgba(255,255,255,0.4);
-    text-transform: uppercase; text-align: center;
+
+  .header { text-align:center; margin-bottom:28px; animation:fadeDown 0.6s ease both; }
+  .header .tag {
+    display:inline-block; background:var(--gold); color:var(--dark);
+    font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+    padding:4px 14px; border-radius:2px; margin-bottom:10px;
+  }
+  .header h1 {
+    font-family:'Bebas Neue',sans-serif; font-size:clamp(2.4rem,7vw,4rem);
+    letter-spacing:3px; line-height:1; text-shadow:0 2px 24px rgba(0,0,0,0.8);
+  }
+  .header h1 span { color:var(--gold); }
+
+  .card {
+    background:var(--glass); border:1px solid rgba(245,197,24,0.2);
+    border-radius:18px; padding:32px 28px; width:100%; max-width:400px;
+    backdrop-filter:blur(20px); box-shadow:0 8px 48px rgba(0,0,0,0.6);
+    animation:fadeUp 0.6s ease 0.1s both;
+  }
+
+  .screen { display:none; flex-direction:column; align-items:center; gap:20px; }
+  .screen.active { display:flex; animation:fadeIn 0.35s ease both; }
+
+  /* ── FIX: QR container — qrcodejs injects a div>img, not a canvas ── */
+  .qr-wrap {
+    background:#fff; border-radius:12px; padding:14px;
+    box-shadow:0 0 0 4px var(--gold), 0 0 32px rgba(245,197,24,0.3);
+    display:flex; align-items:center; justify-content:center;
+  }
+  #qrContainer img { display:block; border-radius:4px; }
+
+  .scan-label { text-align:center; }
+  .scan-label strong { display:block; font-size:18px; letter-spacing:1px; color:var(--gold); font-weight:700; }
+  .scan-label span { font-size:13px; letter-spacing:1.5px; color:rgba(255,255,255,0.5); text-transform:uppercase; }
+
+  .form-group { width:100%; }
+  .form-group label { display:block; font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); margin-bottom:8px; font-weight:700; }
+  .form-group input {
+    width:100%; background:rgba(255,255,255,0.07); border:1.5px solid rgba(245,197,24,0.3);
+    border-radius:8px; padding:14px 16px; font-family:'Rajdhani',sans-serif;
+    font-size:18px; font-weight:600; color:var(--white); outline:none;
+    transition:border-color 0.2s,background 0.2s; letter-spacing:1px;
+  }
+  .form-group input:focus { border-color:var(--gold); background:rgba(245,197,24,0.07); }
+  .form-group input::placeholder { color:rgba(255,255,255,0.28); font-weight:400; }
+
+  .btn {
+    width:100%; padding:15px; background:var(--gold); color:var(--dark);
+    border:none; border-radius:8px; font-family:'Bebas Neue',sans-serif;
+    font-size:22px; letter-spacing:3px; cursor:pointer;
+    transition:transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow:0 4px 20px rgba(245,197,24,0.3);
+  }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(245,197,24,0.45); }
+  .btn:active { transform:none; }
+  .btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; }
+
+  .back-btn { background:none; border:none; color:rgba(255,255,255,0.35); font-size:13px; cursor:pointer; letter-spacing:1px; }
+  .back-btn:hover { color:rgba(255,255,255,0.6); }
+
+  .err-msg { color:var(--red); font-size:13px; text-align:center; letter-spacing:1px; min-height:16px; }
+
+  .spinner { width:32px; height:32px; border:3px solid rgba(255,255,255,0.12); border-top-color:var(--gold); border-radius:50%; animation:spin 0.75s linear infinite; }
+
+  .success-icon {
+    width:72px; height:72px; background:var(--gold); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:34px; color:#000;
+    animation:pop 0.45s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  .success-name { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:2px; color:var(--gold); text-align:center; }
+  .success-meta { font-size:14px; color:rgba(255,255,255,0.55); text-align:center; letter-spacing:1px; line-height:2; }
+  .success-meta b { color:var(--white); }
+
+  .divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(245,197,24,0.3),transparent); }
+
+  .footer { margin-top:24px; font-size:11px; letter-spacing:2px; color:rgba(255,255,255,0.28); text-align:center; animation:fadeUp 0.6s ease 0.3s both; }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:none} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:none} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes spin     { to{transform:rotate(360deg)} }
+  @keyframes pop {
+    0%  {transform:scale(0.3)}
+    70% {transform:scale(1.15)}
+    100%{transform:scale(1)}
   }
 </style>
 </head>
 <body>
 
-<div class="logo">ALVIC GYM</div>
-<div class="sub">Fitness Centre · Trichy</div>
+<div class="bg"></div>
 
-<div class="qr-box">
-  <div id="qrcode"></div>
+<div class="page">
+  <div class="header">
+    <div class="tag">⚡ QR Attendance System</div>
+    <h1>ALVIC <span>GYM</span></h1>
+  </div>
+
+  <div class="card">
+
+    <!-- SCREEN 1: QR Code -->
+    <div class="screen active" id="screen-qr">
+      <div class="scan-label">
+        <strong>Scan to Mark Attendance</strong>
+        <span>Members scan this QR code</span>
+      </div>
+      <!-- FIX: use a plain div — qrcodejs injects its own img inside -->
+      <div class="qr-wrap">
+        <div id="qrContainer"></div>
+      </div>
+      <div class="divider"></div>
+      <button class="btn" onclick="showNameScreen()">✔ SCANNED — ENTER NAME</button>
+    </div>
+
+    <!-- SCREEN 2: Name Entry -->
+    <div class="screen" id="screen-name">
+      <div class="scan-label">
+        <strong>Enter Your Name</strong>
+        <span>Attendance will be auto-saved</span>
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="nameInput" placeholder="e.g. Arjun Selvam"
+          autocomplete="off" autocorrect="off"
+          onkeydown="if(event.key==='Enter') submitAttendance()" />
+      </div>
+      <div class="err-msg" id="errMsg"></div>
+      <button class="btn" id="submitBtn" onclick="submitAttendance()">MARK ATTENDANCE</button>
+      <button class="back-btn" onclick="showQRScreen()">← Back to QR</button>
+    </div>
+
+    <!-- SCREEN 3: Loading -->
+    <div class="screen" id="screen-loading">
+      <div class="spinner"></div>
+      <div class="scan-label"><span>Saving to Google Sheet…</span></div>
+    </div>
+
+    <!-- SCREEN 4: Success -->
+    <div class="screen" id="screen-success">
+      <div class="success-icon">✓</div>
+      <div class="success-name" id="successName"></div>
+      <div class="success-meta" id="successMeta"></div>
+      <div class="divider"></div>
+      <button class="btn" onclick="resetAll()">DONE ✓</button>
+    </div>
+
+  </div>
+
+  <div class="footer">ALVIC GYM &amp; FITNESS CENTRE · TRICHY</div>
 </div>
 
-<div class="instruction">📱 Scan to Mark Attendance</div>
-<div class="instruction2">Open camera → scan QR → enter your name</div>
-
-<!-- QR Library -->
+<!-- qrcodejs from cdnjs — generates a div>img, NOT a canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  // ════════════════════════════════════════════════════════════
-  // IMPORTANT: Replace this URL with the URL where you host
-  // the form.html file. Examples:
-  //   • GitHub Pages: https://yourusername.github.io/alvic/form.html
-  //   • Any web host URL where form.html is uploaded
-  // ════════════════════════════════════════════════════════════
-  const FORM_URL = "https://YOUR_WEBSITE/form.html";
+  // ── ✅ UPDATED Apps Script Web App URL ───────────────────────
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyarbz_DSOUFmakLqwTL2KSNlp0U-ASNc1suLetuMdYno8daBVmftvZ222A-M_jLm38Gg/exec";
+  // ─────────────────────────────────────────────────────────────
 
-  new QRCode(document.getElementById("qrcode"), {
-    text: FORM_URL,
-    width: 250,
-    height: 250,
+  // QR code points to this page URL so scanning opens the form
+  const pageURL = window.location.href.split('?')[0];
+
+  // FIX: target the div#qrContainer, not a canvas element
+  new QRCode(document.getElementById("qrContainer"), {
+    text: pageURL,
+    width: 200,
+    height: 200,
     colorDark: "#000000",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
+
+  function setScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showNameScreen() {
+    setScreen('screen-name');
+    setTimeout(() => document.getElementById('nameInput').focus(), 250);
+  }
+
+  function showQRScreen() {
+    document.getElementById('nameInput').value = '';
+    document.getElementById('errMsg').textContent = '';
+    setScreen('screen-qr');
+  }
+
+  function resetAll() {
+    document.getElementById('nameInput').value = '';
+    document.getElementById('errMsg').textContent = '';
+    setScreen('screen-qr');
+  }
+
+  async function submitAttendance() {
+    const name   = document.getElementById('nameInput').value.trim();
+    const errMsg = document.getElementById('errMsg');
+    errMsg.textContent = '';
+
+    if (!name || name.length < 2) {
+      errMsg.textContent = 'Please enter your full name.';
+      document.getElementById('nameInput').focus();
+      return;
+    }
+
+    setScreen('screen-loading');
+
+    const now  = new Date();
+    const date = now.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    const time = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
+
+    try {
+      // FIX: Send as URL params via GET — avoids CORS preflight issues with Apps Script
+      const url = `${APPS_SCRIPT_URL}?name=${encodeURIComponent(name)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`;
+      await fetch(url, { method: 'GET', mode: 'no-cors' });
+
+      // With no-cors we can't read the response body, but no thrown error = request sent
+      document.getElementById('successName').textContent = name.toUpperCase();
+      document.getElementById('successMeta').innerHTML =
+        `<b>${date}</b> &nbsp;·&nbsp; <b>${time}</b><br>✅ Saved to Google Sheet!`;
+      setScreen('screen-success');
+
+    } catch(err) {
+      setScreen('screen-name');
+      document.getElementById('errMsg').textContent = 'Connection error. Please try again.';
+    }
+  }
+
+  // On mobile (opened via QR scan) → auto-jump to name entry screen
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    setTimeout(showNameScreen, 400);
+  }
 </script>
 </body>
 </html>
